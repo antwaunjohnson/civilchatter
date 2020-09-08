@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -22,14 +23,17 @@ class Blog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), unique=False)
     content = db.Column(db.Text, unique=False)
+    auther = db.Column(db.String(80), unique=True)
+    created_at = db.Column(db.DateTime(), default=datetime.now, )
 
-    def __init__(self, title, content):
+    def __init__(self, title, content, author):
         self.title = title
         self.content = content
+        self.author = author
 
 class BlogSchema(ma.Schema):
     class Meta:
-        fields = ('title', 'content')
+        fields = ('title', 'content', 'author' )
 
 blog_schema = BlogSchema()
 blogs_schema = BlogSchema(many=True)
@@ -40,8 +44,9 @@ blogs_schema = BlogSchema(many=True)
 def create_blog():
     title = request.json['title']
     content = request.json['content']
+    author = request.json['author']
 
-    new_blog = Blog(title, content)
+    new_blog = Blog(title, content, author)
 
     db.session.add(new_blog)
     db.session.commit()
@@ -94,7 +99,8 @@ def delete_blog(id):
     return blog_schema.jsonify(blog)
 
 
-
+# class Comment(db.Model):
+#     __tablename__ = 'comments'
 
 
 if __name__ == '__main__':
