@@ -19,88 +19,108 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
-class Blog(db.Model):
+class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), unique=False)
     content = db.Column(db.Text, unique=False)
     auther = db.Column(db.String(80), unique=True)
-    created_at = db.Column(db.DateTime(), default=datetime.now, )
+    created_at = db.Column(db.DateTime(), default=datetime.utcnow )
+    db.relationship('Reply', backref='post', lazy=True)
 
     def __init__(self, title, content, author):
         self.title = title
         self.content = content
         self.author = author
 
-class BlogSchema(ma.Schema):
+class PostSchema(ma.Schema):
     class Meta:
         fields = ('title', 'content', 'author' )
 
-blog_schema = BlogSchema()
-blogs_schema = BlogSchema(many=True)
+post_schema = PostSchema()
+posts_schema = PostSchema(many=True)
 
 
-# Endpoint to create a blog
-@app.route('/blog', methods=['POST'])
-def create_blog():
+# Endpoint to create a post
+@app.route('/post', methods=['POST'])
+def create_post():
     title = request.json['title']
     content = request.json['content']
     author = request.json['author']
 
-    new_blog = Blog(title, content, author)
+    new_post = Post(title, content, author)
 
-    db.session.add(new_blog)
+    db.session.add(new_post)
     db.session.commit()
 
-    blog = Blog.query.get(new_blog.id)
+    post = Post.query.get(new_post.id)
 
-    return blog_schema.jsonify(blog)
+    return post_schema.jsonify(post)
 
 
-# Endpoint to query all blogs
-@app.route('/blogs', methods=['GET'])
-def get_blogs():
-    all_blogs = Blog.query.all()
-    result = blogs_schema.dump(all_blogs)
+# Endpoint to query all posts
+@app.route('/posts', methods=['GET'])
+def get_posts():
+    all_posts = Post.query.all()
+    result = posts_schema.dump(all_posts)
     return jsonify(result)
 
 
-# Endpoint to query a single blog
-@app.route('/blog/<id>', methods=['GET'])
-def get_blog(id):
-    blog = Blog.query.get(id)
-    return blog_schema.jsonify(blog)
+# Endpoint to query a single post
+@app.route('/post/<id>', methods=['GET'])
+def get_post(id):
+    post = Post.query.get(id)
+    return post_schema.jsonify(post)
 
 
-# Endpoint to edit a blog
-@app.route('/blog/<id>', methods=['PUT'])
-def update_blog(id):
-    blog = Blog.query.get(id)
+# Endpoint to edit a post
+@app.route('/post/<id>', methods=['PUT'])
+def update_post(id):
+    post = Post.query.get(id)
     title = request.json['title']
     content = request.json['content']
 
-    blog.title = title
-    blog.content = content
+    post.title = title
+    post.content = content
 
     db.session.commit()
-    return blog_schema.jsonify(blog)
+    return post_schema.jsonify(post)
 
 
-# Endpoint to delete a blog
-@app.route('/blog/<id>', methods=['DELETE'])
-def delete_blog(id):
-    blog = Blog.query.get(id)
+# Endpoint to delete a post
+@app.route('/post/<id>', methods=['DELETE'])
+def delete_post(id):
+    post = Post.query.get(id)
     title = request.json['title']
 
-    blog.title = title
+    post.title = title
 
-    db.session.delete(blog)
+    db.session.delete(post)
     db.session.commit()
 
-    return blog_schema.jsonify(blog)
+    return post_schema.jsonify(post)
 
 
-# class Comment(db.Model):
-#     __tablename__ = 'comments'
+class Reply(db.Model):
+    __tablename__ = 'replies'
+
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text())
+    author = db.Column(db.String(80))
+    replied_at = db.Column(db.DateTime(), default=datetime.utcnow, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+
+    def __init__(self, text, author):
+        self.text = text
+        self.author = author
+
+class ReplySchema(ma.Schema):
+    class Meta:
+        field = ('text')
+
+reply_schema = ReplySchema()
+replies_schema = ReplySchema(many=True)
+
+
 
 
 if __name__ == '__main__':
